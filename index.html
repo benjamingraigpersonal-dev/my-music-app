@@ -20,7 +20,7 @@
 </head>
 <body>
     <div class="search-area">
-        <input type="text" id="q" placeholder="Трек или артист...">
+        <input type="text" id="q" placeholder="Megadeth...">
         <button class="btn" onclick="search()">🔎</button>
     </div>
 
@@ -37,24 +37,24 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // ТВОЯ АКТУАЛЬНАЯ ССЫЛКА
+        // ТВОЯ АКТУАЛЬНАЯ ССЫЛКА ИЗ СКРИНШОТА
         const API = "https://rude-coats-speak.loca.lt";
         const uid = tg.initDataUnsafe.user?.id || 0;
 
         async function apiFetch(path, options = {}) {
-            return fetch(API + path, {
-                ...options,
-                headers: { 
-                    ...options.headers, 
-                    'Bypass-Tunnel-Reminder': 'true' // Пропускает заставку туннеля
-                }
-            });
+            // Добавляем Bypass-Tunnel-Reminder, чтобы не вылетала страница с паролем внутри приложения
+            const headers = { 
+                ...options.headers, 
+                'Bypass-Tunnel-Reminder': 'true' 
+            };
+            return fetch(API + path, { ...options, headers });
         }
 
         async function search() {
             const query = document.getElementById('q').value;
             if(!query) return;
-            document.querySelector('.btn').innerText = "⏳";
+            const btn = document.querySelector('.btn');
+            btn.innerText = "⏳";
             
             try {
                 const res = await apiFetch(`/search?q=${encodeURIComponent(query)}`);
@@ -62,6 +62,10 @@
                 const div = document.getElementById('results');
                 div.innerHTML = '';
                 
+                if (data.length === 0) {
+                    div.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">Ничего не найдено</div>';
+                }
+
                 data.forEach(t => {
                     const title = t.title.replace(/['"]/g, "");
                     div.innerHTML += `
@@ -71,19 +75,21 @@
                     </div>`;
                 });
             } catch (e) {
-                alert("Ошибка: проверь Aura.py!");
+                alert("Сервер Aura всё еще недоступен. Проверь, что Aura.py запущен и ссылка в коде верна.");
             } finally {
-                document.querySelector('.btn').innerText = "🔎";
+                btn.innerText = "🔎";
             }
         }
 
         async function add(title, url) {
-            await apiFetch('/add', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: uid, title, url })
-            });
-            load();
+            try {
+                await apiFetch('/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: uid, title, url })
+                });
+                load();
+            } catch (e) { console.error(e); }
         }
 
         async function load() {
@@ -109,6 +115,5 @@
     </script>
 </body>
 </html>
-
 
 
