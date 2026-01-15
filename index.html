@@ -3,24 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura Music</title>
+    <title>Aura: Infinite Sound</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --bg: #0b0b0b; --accent: #1DB954; --panel: #181818; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 15px; padding-bottom: 120px; }
-        
-        .search-area { display: flex; gap: 8px; margin-bottom: 20px; position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 5; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 15px; padding-bottom: 120px; overflow-x: hidden; }
+        .search-area { display: flex; gap: 8px; margin-bottom: 20px; }
         input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: var(--panel); color: white; outline: none; }
-        .btn-find { background: var(--accent); color: black; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; }
+        .btn { background: var(--accent); color: black; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; }
+        .track { display: flex; align-items: center; justify-content: space-between; background: var(--panel); padding: 12px; border-radius: 12px; margin-bottom: 8px; }
+        .track-name { flex: 1; font-size: 0.9rem; font-weight: 500; }
+        .add-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); width: 30px; height: 30px; border-radius: 50%; margin-left: 10px; }
+        .player { position: fixed; bottom: 0; left: 0; right: 0; background: #121212; padding: 15px; border-top: 1px solid var(--accent); display: none; z-index: 100; }
+        audio { width: 100%; height: 40px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="search-area">
+        <input type="text" id="q" placeholder="Поиск в Aura...">
+        <button class="btn" onclick="search()">🔍</button>
+    </div>
 
-        .track { display: flex; align-items: center; gap: 12px; background: var(--panel); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
-        .track-info { flex: 1; min-width: 0; }
-        .track-name { font-weight: bold; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .add-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; }
+    <div id="results"></div>
+    <div style="color: #666; font-size: 0.8rem; margin: 20px 0 10px;">МОИ ПЛЕЙЛИСТЫ</div>
+    <div id="library"></div>
 
-        .mini-player { position: fixed; bottom: 0; left: 0; right: 0; background: #121212; padding: 15px; border-top: 1px solid var(--accent); display: none; }
-        audio { width: 100%; height: 35px; margin-top: 5px; }
-        
-        .status-msg { color: #888; font
+    <div class="player" id="player">
+        <div id="p-title" style="font-size: 0.8rem; font-weight: bold;"></div>
+        <audio id="audio" controls></audio>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const API = "https://brown-bags-pick.loca.lt";
+        const uid = tg.initDataUnsafe.user?.id || 0;
+
+        async function apiFetch(path, options = {}) {
+            return fetch(API + path, {
+                ...options,
+                headers: { ...options.headers, 'Bypass-Tunnel-Reminder': 'true' }
+            });
+        }
+
+        async function search() {
+            const q = document.getElementById('q').value;
+            if(!q) return;
+            try {
+                const res = await apiFetch(`/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                const div = document.getElementById('results');
+                div.innerHTML = '';
+                data.forEach(t => {
+                    const title = t.title.replace(/['"]/g, "");
+                    div.innerHTML += `
+                    <div class="track">
+                        <div class="track-name" onclick="play('${t.url}', '${title}')">${t.title}</div>
+                        <button class="add-btn" onclick="add('${title}', '${t.url}')">+</button>
+                    </div>`;
+                });
+            } catch (e) { alert("Сервер Aura недоступен. Проверь Aura.py!"); }
+        }
+
+        async function add(t, u) {
+            await apiFetch('/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: uid, title: t, url: u })
+            });
+            load();
+        }
+
+        async function load() {
+            try {
+                const res = await apiFetch(`/get?user_id=${uid}`);
+                const data = await res.json();
+                document.getElementById('library').innerHTML = data.map(t => `
+                    <div class="track" onclick="play('${t.url}', '${t.title}')">
+                        <div class="track-name">🎵 ${t.title}</div>
+                    </div>`).join('');
+            } catch (e) {}
+        }
+
+        function play(u, t) {
+            document.getElementById('player').style.display = 'block';
+            document.getElementById('p-title').innerText = t;
+            const a = document.getElementById('audio');
+            a.src = u;
+            a.play();
+        }
+        load();
+    </script>
+</body>
+</html>
 
