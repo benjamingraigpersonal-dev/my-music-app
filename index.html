@@ -3,141 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura: Infinite Sound</title>
+    <title>Aura: Music App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            background-color: #0b0b0b;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-        .search-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #1a1a1a;
-            color: white;
-            font-size: 16px;
-        }
-        .search-btn {
-            background-color: #2ecc71;
-            border: none;
-            border-radius: 8px;
-            padding: 0 15px;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .track-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .track-card {
-            background: #181818;
-            padding: 15px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-            border: 1px solid transparent;
-        }
-        .track-card:hover {
-            background: #282828;
-            border-color: #2ecc71;
-        }
-        .status {
-            text-align: center;
-            color: #888;
-            margin-top: 20px;
-        }
+        body { background-color: #0b0b0b; color: white; font-family: sans-serif; padding: 20px; margin: 0; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: white; }
+        button { background: #2ecc71; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .track-card { background: #181818; padding: 15px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+        .track-card:hover { border-color: #2ecc71; background: #222; }
+        #status { color: #888; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Введите название песни или группы...">
-        <button class="search-btn" onclick="searchMusic()">🔍</button>
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Какую песню ищем?">
+        <button onclick="search()">🔎</button>
     </div>
 
-    <div id="results" class="track-list">
-        </div>
-
-    <div id="status" class="status"></div>
+    <div id="results"></div>
+    <div id="status"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем на весь экран
+        tg.expand();
 
         // ТВОЯ АКТУАЛЬНАЯ ССЫЛКА
-        const API_URL = "https://tasty-pandas-judge.loca.lt";
+        const API_URL = "https://lazy-icons-send.loca.lt";
 
-        async function searchMusic() {
-            const query = document.getElementById('searchInput').value;
+        async function search() {
+            const query = document.getElementById('query').value;
             const resultsDiv = document.getElementById('results');
             const statusDiv = document.getElementById('status');
 
             if (!query) return;
 
             resultsDiv.innerHTML = "";
-            statusDiv.innerText = "⏳ Ищем в Aura...";
+            statusDiv.innerText = "⏳ Aura ищет музыку...";
 
             try {
                 const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json',
-                        // ЭТОТ ЗАГОЛОВОК УБИРАЕТ ПРОВЕРКУ LOCALTUNNEL
-                        'Bypass-Tunnel-Reminder': 'true'
-                    }
-                });
-
-                if (!response.ok) throw new Error("Ошибка сервера");
-
-                const data = await response.json();
-                statusDiv.innerText = "";
-
-                if (data.length === 0) {
-                    statusDiv.innerText = "Ничего не найдено 😕";
-                    return;
-                }
-
-                data.forEach(track => {
-                    const card = document.createElement('div');
-                    card.className = 'track-card';
-                    card.innerHTML = `🎵 <b>${track.title}</b>`;
-                    card.onclick = () => {
-                        // Открываем ссылку в браузере через Telegram
-                        tg.openLink(track.url);
-                    };
-                    resultsDiv.appendChild(card);
-                });
-
-            } catch (error) {
-                console.error(error);
-                statusDiv.innerText = "";
-                // Выводим ошибку как на твоих скриншотах
-                alert("Ошибка: Сервер Aura недоступен. Проверь Aura.py и LocalTunnel!");
-            }
-        }
-
-        // Поиск по нажатию Enter
-        document.getElementById('searchInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                searchMusic();
-            }
-        });
-    </script>
-</body>
-</html>
+                        //
