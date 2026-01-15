@@ -3,152 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura Music Player</title>
+    <title>Aura Music</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: #0b0b0b;
-            --text-color: #ffffff;
-            --accent-color: #1DB954;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
-        }
-
-        /* Skins */
-        body.skin-neon { --accent-color: #00f2ff; background: #000; text-shadow: 0 0 8px #00f2ff; }
-        body.skin-gold { --accent-color: #ffd700; background: #1a1608; }
-
-        .vinyl-container {
-            position: relative; width: 280px; height: 280px; margin-bottom: 30px;
-        }
-        .vinyl {
-            width: 100%; height: 100%;
-            background: radial-gradient(circle, #222 10%, #050505 11%, #111 20%, #000 21%);
-            border-radius: 50%; border: 4px solid #333;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            animation: rotate 4s linear infinite;
-            animation-play-state: paused;
-        }
-        .vinyl::after {
-            content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 50px; height: 50px; background: #111; border: 2px solid var(--accent-color); border-radius: 50%;
-        }
+        :root { --bg: #0b0b0b; --accent: #1DB954; --panel: #181818; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: var(--panel); color: white; }
+        button { padding: 10px 20px; border-radius: 8px; border: none; background: var(--accent); font-weight: bold; }
 
-        .track-info { text-align: center; width: 90%; margin-bottom: 30px; }
-        .track-title { font-size: 1.4rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .controls { display: flex; gap: 20px; align-items: center; }
-        button {
-            background: var(--accent-color); color: #000; border: none; padding: 15px 30px;
-            border-radius: 30px; font-weight: bold; font-size: 1rem; cursor: pointer;
-        }
-        .skin-btn { background: transparent; color: var(--text-color); border: 1px solid var(--text-color); padding: 8px 15px; }
+        .track-item { display: flex; align-items: center; gap: 10px; background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 8px; }
+        .track-item img { width: 50px; height: 50px; border-radius: 4px; }
+        .track-info { flex: 1; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        #progress-bar { width: 80%; height: 4px; background: #333; border-radius: 2px; margin-top: 20px; position: relative; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent-color); border-radius: 2px; }
-        
-        /* Error Message Display */
-        #error-msg { color: #ff4444; font-size: 0.8rem; margin-top: 10px; display: none; }
+        .player-fixed { position: fixed; bottom: 0; left: 0; right: 0; background: #222; padding: 15px; display: none; border-top: 2px solid var(--accent); }
+        .playlist-section { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
     </style>
 </head>
-<body class="skin-modern">
+<body>
 
-    <div class="track-info">
-        <div class="track-title" id="title">Aura Music</div>
-        <div id="error-msg"></div>
+    <div class="search-box">
+        <input type="text" id="searchQuery" placeholder="Поиск музыки в Aura...">
+        <button onclick="search()">Найти</button>
     </div>
 
-    <div class="vinyl-container">
-        <div id="vinyl" class="vinyl"></div>
+    <div id="results"></div>
+
+    <div class="playlist-section">
+        <h3>Мой Плейлист</h3>
+        <div id="myPlaylist"></div>
     </div>
 
-    <div id="progress-bar"><div id="progress-fill"></div></div>
-
-    <div class="controls" style="margin-top: 40px;">
-        <button onclick="nextSkin()" class="skin-btn">SKIN</button>
-        <button onclick="togglePlay()" id="playBtn">PLAY</button>
-        <button onclick="tg.close()" class="skin-btn">EXIT</button>
+    <div class="player-fixed" id="player">
+        <div id="nowPlaying" style="font-size: 0.8rem; margin-bottom: 5px;"></div>
+        <audio id="audio" controls style="width: 100%; height: 30px;"></audio>
     </div>
-
-    <audio id="audio"></audio>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        const SERVER_URL = "http://твой-ip:8080"; // ЗАМЕНИ НА IP СВОЕГО СЕРВЕРА
 
-        const audio = document.getElementById('audio');
-        const vinyl = document.getElementById('vinyl');
-        const playBtn = document.getElementById('playBtn');
-        const progress = document.getElementById('progress-fill');
-        const errorMsg = document.getElementById('error-msg');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const musicUrl = urlParams.get('url');
-        const musicTitle = urlParams.get('title');
-
-        if(musicTitle) document.getElementById('title').innerText = decodeURIComponent(musicTitle);
-        
-        if(musicUrl) {
-            audio.src = musicUrl;
-            // Пытаемся запустить, но осторожно (браузеры блокируют автоплей)
-            console.log("Loading URL:", musicUrl);
+        async function search() {
+            const q = document.getElementById('searchQuery').value;
+            const res = await fetch(`${SERVER_URL}/search?q=${q}`);
+            const tracks = await res.json();
+            
+            const container = document.getElementById('results');
+            container.innerHTML = '';
+            
+            tracks.forEach(t => {
+                container.innerHTML += `
+                    <div class="track-item">
+                        <img src="${t.thumb}">
+                        <div class="track-info" onclick="play('${t.url}', '${t.title}')">
+                            ${t.title}
+                        </div>
+                        <button onclick="addToPlaylist('${t.title}', '${t.url}')">+</button>
+                    </div>
+                `;
+            });
         }
 
-        // Обработка ошибок
-        audio.onerror = function() {
-            let err = "Error: ";
-            if (audio.error.code === 4) err += "Format not supported or 403 Forbidden";
-            else err += "Code " + audio.error.code;
-            errorMsg.innerText = err;
-            errorMsg.style.display = 'block';
-            playBtn.innerText = "ERROR";
-        };
-
-        function togglePlay() {
-            if (audio.paused) {
-                // Promise помогает отловить ошибки запуска
-                var playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(_ => {
-                        vinyl.style.animationPlayState = 'running';
-                        playBtn.innerText = 'PAUSE';
-                        errorMsg.style.display = 'none';
-                    })
-                    .catch(error => {
-                        errorMsg.innerText = "Play blocked: " + error.message;
-                        errorMsg.style.display = 'block';
-                    });
-                }
-            } else {
-                audio.pause();
-                vinyl.style.animationPlayState = 'paused';
-                playBtn.innerText = 'PLAY';
-            }
+        function play(url, title) {
+            const player = document.getElementById('player');
+            const audio = document.getElementById('audio');
+            document.getElementById('nowPlaying').innerText = title;
+            player.style.display = 'block';
+            audio.src = url;
+            audio.play();
         }
 
-        audio.ontimeupdate = () => {
-            if(audio.duration) {
-                const pct = (audio.currentTime / audio.duration) * 100;
-                progress.style.width = pct + '%';
-            }
-        };
-
-        let currentSkin = 0;
-        const skins = ['skin-modern', 'skin-neon', 'skin-gold'];
-        function nextSkin() {
-            document.body.classList.remove(skins[currentSkin]);
-            currentSkin = (currentSkin + 1) % skins.length;
-            document.body.classList.add(skins[currentSkin]);
+        async function addToPlaylist(title, url) {
+            await fetch(`${SERVER_URL}/add_playlist`, {
+                method: 'POST',
+                body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id, title, url })
+            });
+            loadPlaylist();
         }
 
-        document.documentElement.style.setProperty('--bg-color', tg.themeParams.bg_color);
-        document.documentElement.style.setProperty('--text-color', tg.themeParams.text_color);
+        async function loadPlaylist() {
+            const res = await fetch(`${SERVER_URL}/get_playlist?user_id=${tg.initDataUnsafe.user.id}`);
+            const tracks = await res.json();
+            const container = document.getElementById('myPlaylist');
+            container.innerHTML = tracks.map(t => `
+                <div class="track-item" onclick="play('${t.url}', '${t.title}')">
+                    <div class="track-info">● ${t.title}</div>
+                </div>
+            `).join('');
+        }
+
+        loadPlaylist();
     </script>
 </body>
 </html>
