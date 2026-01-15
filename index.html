@@ -7,95 +7,132 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --bg: #0b0b0b; --accent: #1DB954; --panel: #181818; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 15px; }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; padding: 15px; padding-bottom: 100px; }
         
-        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: var(--panel); color: white; }
-        button { padding: 10px 20px; border-radius: 8px; border: none; background: var(--accent); font-weight: bold; }
+        /* Поиск */
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; position: sticky; top: 10px; z-index: 10; }
+        input { flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--panel); color: white; outline: none; border: 1px solid #333; }
+        .btn-search { padding: 10px 20px; border-radius: 12px; border: none; background: var(--accent); font-weight: bold; color: black; }
 
-        .track-item { display: flex; align-items: center; gap: 10px; background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 8px; }
-        .track-item img { width: 50px; height: 50px; border-radius: 4px; }
-        .track-info { flex: 1; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Треки */
+        .track-item { display: flex; align-items: center; gap: 12px; background: var(--panel); padding: 12px; border-radius: 12px; margin-bottom: 10px; transition: 0.2s; }
+        .track-item:active { transform: scale(0.98); background: #252525; }
+        .track-item img { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; }
+        .track-info { flex: 1; overflow: hidden; }
+        .track-title { font-weight: bold; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .btn-add { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 50%; width: 30px; height: 30px; font-size: 1.2rem; cursor: pointer; }
 
-        .player-fixed { position: fixed; bottom: 0; left: 0; right: 0; background: #222; padding: 15px; display: none; border-top: 2px solid var(--accent); }
-        .playlist-section { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
+        /* Плеер */
+        .player-fixed { position: fixed; bottom: 0; left: 0; right: 0; background: #121212; padding: 15px; border-top: 1px solid var(--accent); display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+        .player-controls { display: flex; flex-direction: column; gap: 10px; }
+        audio { width: 100%; height: 35px; filter: invert(100%); }
+
+        h3 { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 30px; }
     </style>
 </head>
 <body>
 
     <div class="search-box">
-        <input type="text" id="searchQuery" placeholder="Поиск музыки в Aura...">
-        <button onclick="search()">Найти</button>
+        <input type="text" id="searchQuery" placeholder="Трек, артист или ссылка...">
+        <button class="btn-search" onclick="search()">Найти</button>
     </div>
 
     <div id="results"></div>
 
     <div class="playlist-section">
-        <h3>Мой Плейлист</h3>
+        <h3>Моя медиатека</h3>
         <div id="myPlaylist"></div>
     </div>
 
     <div class="player-fixed" id="player">
-        <div id="nowPlaying" style="font-size: 0.8rem; margin-bottom: 5px;"></div>
-        <audio id="audio" controls style="width: 100%; height: 30px;"></audio>
+        <div class="player-controls">
+            <div id="nowPlaying" style="font-size: 0.85rem; font-weight: bold; color: var(--accent);"></div>
+            <audio id="audio" controls></audio>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        const SERVER_URL = "http://твой-ip:8080"; // ЗАМЕНИ НА IP СВОЕГО СЕРВЕРА
+        
+        // Твои IP адреса
+        const API_BASE = "http://85.203.42.218:8080"; 
 
         async function search() {
-            const q = document.getElementById('searchQuery').value;
-            const res = await fetch(`${SERVER_URL}/search?q=${q}`);
-            const tracks = await res.json();
+            const query = document.getElementById('searchQuery').value;
+            if(!query) return;
             
-            const container = document.getElementById('results');
-            container.innerHTML = '';
+            const btn = document.querySelector('.btn-search');
+            btn.innerText = "...";
             
-            tracks.forEach(t => {
-                container.innerHTML += `
-                    <div class="track-item">
-                        <img src="${t.thumb}">
-                        <div class="track-info" onclick="play('${t.url}', '${t.title}')">
-                            ${t.title}
+            try {
+                const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+                const tracks = await res.json();
+                
+                const container = document.getElementById('results');
+                container.innerHTML = '<h3>Результаты поиска</h3>';
+                
+                tracks.forEach(t => {
+                    container.innerHTML += `
+                        <div class="track-item">
+                            <img src="${t.thumb || 'https://via.placeholder.com/50'}">
+                            <div class="track-info" onclick="play('${t.url}', '${t.title.replace(/'/g, "\\'")}')">
+                                <div class="track-title">${t.title}</div>
+                            </div>
+                            <button class="btn-add" onclick="addToPlaylist('${t.title.replace(/'/g, "\\'")}', '${t.url}')">+</button>
                         </div>
-                        <button onclick="addToPlaylist('${t.title}', '${t.url}')">+</button>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            } catch (e) {
+                alert("Ошибка связи с сервером Aura. Убедитесь, что бот запущен.");
+            } finally {
+                btn.innerText = "Найти";
+            }
         }
 
         function play(url, title) {
             const player = document.getElementById('player');
             const audio = document.getElementById('audio');
-            document.getElementById('nowPlaying').innerText = title;
+            document.getElementById('nowPlaying').innerText = "▶ " + title;
             player.style.display = 'block';
             audio.src = url;
             audio.play();
         }
 
         async function addToPlaylist(title, url) {
-            await fetch(`${SERVER_URL}/add_playlist`, {
-                method: 'POST',
-                body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id, title, url })
-            });
-            loadPlaylist();
+            try {
+                await fetch(`${API_BASE}/add_playlist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: tg.initDataUnsafe.user?.id || 0, 
+                        title: title, 
+                        url: url 
+                    })
+                });
+                loadPlaylist();
+            } catch (e) { console.error(e); }
         }
 
         async function loadPlaylist() {
-            const res = await fetch(`${SERVER_URL}/get_playlist?user_id=${tg.initDataUnsafe.user.id}`);
-            const tracks = await res.json();
-            const container = document.getElementById('myPlaylist');
-            container.innerHTML = tracks.map(t => `
-                <div class="track-item" onclick="play('${t.url}', '${t.title}')">
-                    <div class="track-info">● ${t.title}</div>
-                </div>
-            `).join('');
+            const uid = tg.initDataUnsafe.user?.id || 0;
+            try {
+                const res = await fetch(`${API_BASE}/get_playlist?user_id=${uid}`);
+                const tracks = await res.json();
+                const container = document.getElementById('myPlaylist');
+                container.innerHTML = tracks.map(t => `
+                    <div class="track-item" onclick="play('${t.url}', '${t.title.replace(/'/g, "\\'")}')">
+                        <div class="track-info">
+                            <div class="track-title">${t.title}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
         }
 
+        // Загрузка при старте
         loadPlaylist();
     </script>
 </body>
 </html>
-
