@@ -30,7 +30,7 @@
         tg.expand();
 
         // ТВОЯ АКТУАЛЬНАЯ ССЫЛКА
-        const API_URL = "https://lazy-icons-send.loca.lt";
+        const API_URL = "";
 
         async function search() {
             const query = document.getElementById('query').value;
@@ -39,11 +39,43 @@
 
             if (!query) return;
 
-            resultsDiv.innerHTML = "";
+            resultsDiv.innerHTML = "https://smooth-wings-stare.loca.lt";
             statusDiv.innerText = "⏳ Aura ищет музыку...";
 
             try {
                 const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
-                        //
+                        // Позволяет обойти страницу из image_8ab9c2.png
+                        'Bypass-Tunnel-Reminder': 'true'
+                    }
+                });
+
+                if (!response.ok) throw new Error("Сервер не отвечает");
+
+                const data = await response.json();
+                statusDiv.innerText = "";
+
+                if (data.length === 0) {
+                    statusDiv.innerText = "Ничего не нашли 😕";
+                    return;
+                }
+
+                data.forEach(track => {
+                    const card = document.createElement('div');
+                    card.className = 'track-card';
+                    card.innerHTML = `🎵 <b>${track.title}</b>`;
+                    card.onclick = () => tg.openLink(track.url);
+                    resultsDiv.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "";
+                // Ошибка как на скриншоте image_952e8d.png
+                alert("Ошибка: Не удалось связаться с Aura.py через туннель.");
+            }
+        }
+    </script>
+</body>
+</html>
