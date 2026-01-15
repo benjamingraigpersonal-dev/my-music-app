@@ -3,72 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura: Infinite Sound</title>
+    <title>Aura Music</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background-color: #0b0b0b; color: white; font-family: sans-serif; padding: 20px; margin: 0; }
-        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: white; }
-        button { background: #2ecc71; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .track-card { background: #181818; padding: 15px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
-        .track-card:hover { border-color: #2ecc71; background: #222; }
-        #status { color: #888; text-align: center; }
+        body { background: #0b0b0b; color: white; font-family: sans-serif; padding: 20px; }
+        input { width: 70%; padding: 10px; border-radius: 5px; border: none; }
+        button { width: 25%; padding: 10px; background: #2ecc71; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .track { background: #222; margin: 10px 0; padding: 10px; border-radius: 5px; cursor: pointer; }
+        #debug { color: #ff5555; font-size: 12px; margin-top: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
-
-    <div class="search-box">
-        <input type="text" id="query" placeholder="Какую песню ищем?">
-        <button onclick="search()">🔎</button>
+    <div style="display:flex; gap:10px;">
+        <input type="text" id="q" placeholder="Megadeth...">
+        <button onclick="search()">🔍</button>
     </div>
-
     <div id="results"></div>
-    <div id="status"></div>
+    <div id="debug"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // ТВОЯ ССЫЛКА XTUNNEL (ОБЯЗАТЕЛЬНО HTTPS)
-        const API_URL = "https://81a92a95-0b7f-466e-a5d9-28bb798d5923.tunnel4.com";
+        // !!! ВСТАВЬ СЮДА СВЕЖУЮ ССЫЛКУ ИЗ XTUNNEL !!!
+        // Например: https://81a92a95...tunnel4.com
+        const API_URL = "https://d0b4c0b6-50b1-4124-a272-ca20acd432e0.tunnel4.com";
 
         async function search() {
-            const query = document.getElementById('query').value;
-            const resultsDiv = document.getElementById('results');
-            const statusDiv = document.getElementById('status');
-
-            if (!query) return;
-
-            resultsDiv.innerHTML = "";
-            statusDiv.innerText = "⏳ Aura ищет музыку...";
+            const query = document.getElementById('q').value;
+            const debugDiv = document.getElementById('debug');
+            const resDiv = document.getElementById('results');
+            
+            resDiv.innerHTML = "⏳...";
+            debugDiv.innerText = "";
 
             try {
+                // Пытаемся подключиться
                 const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
-                    method: 'GET'
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
-                if (!response.ok) throw new Error("Ошибка сервера");
+                // Если сервер ответил ошибкой (например, 404 или 500)
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
 
                 const data = await response.json();
-                statusDiv.innerText = "";
+                resDiv.innerHTML = "";
 
                 if (data.length === 0) {
-                    statusDiv.innerText = "Ничего не найдено 😕";
+                    resDiv.innerHTML = "Ничего не найдено.";
                     return;
                 }
 
-                data.forEach(track => {
-                    const card = document.createElement('div');
-                    card.className = 'track-card';
-                    card.innerHTML = `🎵 <b>${track.title}</b>`;
-                    card.onclick = () => tg.openLink(track.url);
-                    resultsDiv.appendChild(card);
+                data.forEach(t => {
+                    const div = document.createElement('div');
+                    div.className = 'track';
+                    div.innerText = `🎵 ${t.title}`;
+                    div.onclick = () => tg.openLink(t.url);
+                    resDiv.appendChild(div);
                 });
 
-            } catch (err) {
-                console.error(err);
-                statusDiv.innerText = "";
-                alert("Ошибка: Сервер Aura недоступен. Проверь Aura.py и xTunnel!");
+            } catch (e) {
+                resDiv.innerHTML = "";
+                // Выводим ТОЧНУЮ причину ошибки на экран
+                debugDiv.innerText = `FAIL: ${e.message}. Проверь ссылку API_URL!`;
+                alert("Не удалось связаться. См. красный текст ниже.");
             }
         }
     </script>
