@@ -1,95 +1,79 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aura Music Player</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg: #0f0f0f;
-            --panel: #1e1e1e;
-            --accent: #1DB954; /* Spotify Green */
-            --text: #ffffff;
+            --bg-color: #0b0b0b;
+            --text-color: #ffffff;
+            --accent-color: #1DB954;
         }
-
         body {
-            background: var(--bg); color: var(--text);
-            font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            margin: 0; display: flex; flex-direction: column; align-items: center;
-            height: 100vh; transition: 0.3s;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
         }
 
-        /* Скины */
-        body.skin-neon { --accent: #00f2ff; --bg: #050505; text-shadow: 0 0 10px var(--accent); }
-        body.skin-retro { --accent: #ff5500; --bg: #2b1d0e; }
+        /* Skins */
+        body.skin-neon { --accent-color: #00f2ff; background: #000; text-shadow: 0 0 8px #00f2ff; }
+        body.skin-gold { --accent-color: #ffd700; background: #1a1608; }
 
-        .header { width: 100%; padding: 20px; text-align: center; font-weight: bold; font-size: 1.2em; }
-
-        /* Пластинка */
-        .player-container {
-            flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .vinyl-wrapper {
-            position: relative; width: 260px; height: 260px;
+        .vinyl-container {
+            position: relative; width: 280px; height: 280px; margin-bottom: 30px;
         }
         .vinyl {
             width: 100%; height: 100%;
-            background: radial-gradient(circle, #333 10%, #111 11%, #111 20%, #000 21%);
-            border-radius: 50%; border: 4px solid #222;
-            animation: rotate 5s linear infinite; animation-play-state: paused;
-            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            background: radial-gradient(circle, #222 10%, #050505 11%, #111 20%, #000 21%);
+            border-radius: 50%; border: 4px solid #333;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            animation: rotate 4s linear infinite;
+            animation-play-state: paused;
         }
-        .vinyl.playing { animation-play-state: running; }
-        .vinyl::before {
+        .vinyl::after {
             content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 50px; height: 50px; background: var(--panel); border-radius: 50%; border: 2px solid var(--accent);
+            width: 50px; height: 50px; background: #111; border: 2px solid var(--accent-color); border-radius: 50%;
         }
-
-        /* Управление */
-        .controls-panel {
-            width: 100%; background: var(--panel); padding: 30px 0;
-            border-radius: 30px 30px 0 0; display: flex; flex-direction: column; align-items: center;
-        }
-        .track-info { margin-bottom: 20px; text-align: center; width: 80%; }
-        .track-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        .buttons { display: flex; gap: 20px; align-items: center; }
-        .btn-main {
-            width: 60px; height: 60px; background: var(--accent); border: none; border-radius: 50%;
-            font-weight: bold; color: black; cursor: pointer;
-        }
-        .btn-sec {
-            background: none; border: 1px solid #555; color: white; padding: 8px 15px; border-radius: 15px;
-        }
-
+        
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        #progress-bar { width: 80%; height: 4px; background: #444; margin-bottom: 20px; border-radius: 2px; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; }
+        .track-info { text-align: center; width: 90%; margin-bottom: 30px; }
+        .track-title { font-size: 1.4rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .controls { display: flex; gap: 20px; align-items: center; }
+        button {
+            background: var(--accent-color); color: #000; border: none; padding: 15px 30px;
+            border-radius: 30px; font-weight: bold; font-size: 1rem; cursor: pointer;
+        }
+        .skin-btn { background: transparent; color: var(--text-color); border: 1px solid var(--text-color); padding: 8px 15px; }
+
+        #progress-bar { width: 80%; height: 4px; background: #333; border-radius: 2px; margin-top: 20px; position: relative; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent-color); border-radius: 2px; }
+        
+        /* Error Message Display */
+        #error-msg { color: #ff4444; font-size: 0.8rem; margin-top: 10px; display: none; }
     </style>
 </head>
 <body class="skin-modern">
 
-    <div class="header">Aura Premium</div>
-
-    <div class="player-container">
-        <div class="vinyl-wrapper">
-            <div id="vinyl" class="vinyl"></div>
-        </div>
+    <div class="track-info">
+        <div class="track-title" id="title">Aura Music</div>
+        <div id="error-msg"></div>
     </div>
 
-    <div class="controls-panel">
-        <div class="track-info">
-            <div class="track-title" id="title">Выбери трек в боте</div>
-        </div>
-        
-        <div id="progress-bar"><div id="progress-fill"></div></div>
+    <div class="vinyl-container">
+        <div id="vinyl" class="vinyl"></div>
+    </div>
 
-        <div class="buttons">
-            <button class="btn-sec" onclick="changeSkin()">SKIN</button>
-            <button class="btn-main" onclick="togglePlay()" id="playBtn">▶️</button>
-            <button class="btn-sec">QUEUE</button>
-        </div>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+
+    <div class="controls" style="margin-top: 40px;">
+        <button onclick="nextSkin()" class="skin-btn">SKIN</button>
+        <button onclick="togglePlay()" id="playBtn">PLAY</button>
+        <button onclick="tg.close()" class="skin-btn">EXIT</button>
     </div>
 
     <audio id="audio"></audio>
@@ -97,46 +81,75 @@
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.setHeaderColor('secondary_bg_color');
 
         const audio = document.getElementById('audio');
         const vinyl = document.getElementById('vinyl');
         const playBtn = document.getElementById('playBtn');
-        const fill = document.getElementById('progress-fill');
+        const progress = document.getElementById('progress-fill');
+        const errorMsg = document.getElementById('error-msg');
 
-        // Получение данных из URL
-        const params = new URLSearchParams(window.location.search);
-        if(params.has('url')) audio.src = params.get('url');
-        if(params.has('title')) document.getElementById('title').innerText = params.get('title');
+        const urlParams = new URLSearchParams(window.location.search);
+        const musicUrl = urlParams.get('url');
+        const musicTitle = urlParams.get('title');
+
+        if(musicTitle) document.getElementById('title').innerText = decodeURIComponent(musicTitle);
+        
+        if(musicUrl) {
+            audio.src = musicUrl;
+            // Пытаемся запустить, но осторожно (браузеры блокируют автоплей)
+            console.log("Loading URL:", musicUrl);
+        }
+
+        // Обработка ошибок
+        audio.onerror = function() {
+            let err = "Error: ";
+            if (audio.error.code === 4) err += "Format not supported or 403 Forbidden";
+            else err += "Code " + audio.error.code;
+            errorMsg.innerText = err;
+            errorMsg.style.display = 'block';
+            playBtn.innerText = "ERROR";
+        };
 
         function togglePlay() {
             if (audio.paused) {
-                audio.play();
-                vinyl.classList.add('playing');
-                playBtn.innerText = '⏸';
+                // Promise помогает отловить ошибки запуска
+                var playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        vinyl.style.animationPlayState = 'running';
+                        playBtn.innerText = 'PAUSE';
+                        errorMsg.style.display = 'none';
+                    })
+                    .catch(error => {
+                        errorMsg.innerText = "Play blocked: " + error.message;
+                        errorMsg.style.display = 'block';
+                    });
+                }
             } else {
                 audio.pause();
-                vinyl.classList.remove('playing');
-                playBtn.innerText = '▶️';
+                vinyl.style.animationPlayState = 'paused';
+                playBtn.innerText = 'PLAY';
             }
         }
 
         audio.ontimeupdate = () => {
-            const pct = (audio.currentTime / audio.duration) * 100;
-            fill.style.width = pct + '%';
+            if(audio.duration) {
+                const pct = (audio.currentTime / audio.duration) * 100;
+                progress.style.width = pct + '%';
+            }
         };
 
-        const skins = ['skin-modern', 'skin-neon', 'skin-retro'];
-        let skinIdx = 0;
-        function changeSkin() {
-            document.body.classList.remove(skins[skinIdx]);
-            skinIdx = (skinIdx + 1) % skins.length;
-            document.body.classList.add(skins[skinIdx]);
+        let currentSkin = 0;
+        const skins = ['skin-modern', 'skin-neon', 'skin-gold'];
+        function nextSkin() {
+            document.body.classList.remove(skins[currentSkin]);
+            currentSkin = (currentSkin + 1) % skins.length;
+            document.body.classList.add(skins[currentSkin]);
         }
 
-        // Авто-подстройка под тему TG
-        document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
-        document.documentElement.style.setProperty('--text', tg.themeParams.text_color);
+        document.documentElement.style.setProperty('--bg-color', tg.themeParams.bg_color);
+        document.documentElement.style.setProperty('--text-color', tg.themeParams.text_color);
     </script>
 </body>
 </html>
+
