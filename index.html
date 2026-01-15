@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura: Music App</title>
+    <title>Aura: Infinite Sound</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background-color: #0b0b0b; color: white; font-family: sans-serif; padding: 20px; margin: 0; }
@@ -12,7 +12,7 @@
         button { background: #2ecc71; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .track-card { background: #181818; padding: 15px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
         .track-card:hover { border-color: #2ecc71; background: #222; }
-        #status { color: #888; text-align: center; margin-top: 10px; }
+        #status { color: #888; text-align: center; }
     </style>
 </head>
 <body>
@@ -29,8 +29,8 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // ТВОЯ АКТУАЛЬНАЯ ССЫЛКА
-        const API_URL = "";
+        // ТВОЯ ССЫЛКА XTUNNEL (ОБЯЗАТЕЛЬНО HTTPS)
+        const API_URL = "https://81a92a95-0b7f-466e-a5d9-28bb798d5923.tunnel4.com";
 
         async function search() {
             const query = document.getElementById('query').value;
@@ -39,25 +39,21 @@
 
             if (!query) return;
 
-            resultsDiv.innerHTML = "https://smooth-wings-stare.loca.lt";
+            resultsDiv.innerHTML = "";
             statusDiv.innerText = "⏳ Aura ищет музыку...";
 
             try {
                 const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
-                    method: 'GET',
-                    headers: {
-                        // Позволяет обойти страницу из image_8ab9c2.png
-                        'Bypass-Tunnel-Reminder': 'true'
-                    }
+                    method: 'GET'
                 });
 
-                if (!response.ok) throw new Error("Сервер не отвечает");
+                if (!response.ok) throw new Error("Ошибка сервера");
 
                 const data = await response.json();
                 statusDiv.innerText = "";
 
                 if (data.length === 0) {
-                    statusDiv.innerText = "Ничего не нашли 😕";
+                    statusDiv.innerText = "Ничего не найдено 😕";
                     return;
                 }
 
@@ -72,8 +68,7 @@
             } catch (err) {
                 console.error(err);
                 statusDiv.innerText = "";
-                // Ошибка как на скриншоте image_952e8d.png
-                alert("Ошибка: Не удалось связаться с Aura.py через туннель.");
+                alert("Ошибка: Сервер Aura недоступен. Проверь Aura.py и xTunnel!");
             }
         }
     </script>
