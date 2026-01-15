@@ -1,137 +1,124 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aura Music</title>
+    <title>Aura Music v2.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #0b0b0b; --accent: #1DB954; --panel: #181818; }
-        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; padding: 15px; padding-bottom: 100px; }
+        :root { --bg: #0b0b0b; --accent: #1DB954; --panel: #181818; --text: #ffffff; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 15px; padding-bottom: 120px; }
         
-        /* Поиск */
-        .search-box { display: flex; gap: 10px; margin-bottom: 20px; position: sticky; top: 10px; z-index: 10; }
-        input { flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--panel); color: white; outline: none; border: 1px solid #333; }
-        .btn-search { padding: 10px 20px; border-radius: 12px; border: none; background: var(--accent); font-weight: bold; color: black; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 10; }
+        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: var(--panel); color: white; outline: none; }
+        button.search-btn { background: var(--accent); color: black; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; }
 
-        /* Треки */
-        .track-item { display: flex; align-items: center; gap: 12px; background: var(--panel); padding: 12px; border-radius: 12px; margin-bottom: 10px; transition: 0.2s; }
-        .track-item:active { transform: scale(0.98); background: #252525; }
-        .track-item img { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; }
+        .section-title { color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
+        
+        .track-card { display: flex; align-items: center; gap: 12px; background: var(--panel); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
+        .track-img { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; }
         .track-info { flex: 1; overflow: hidden; }
-        .track-title { font-weight: bold; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .track-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        .btn-add { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 50%; width: 30px; height: 30px; font-size: 1.2rem; cursor: pointer; }
+        .add-btn { background: none; border: 1px solid var(--accent); color: var(--accent); width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
 
-        /* Плеер */
-        .player-fixed { position: fixed; bottom: 0; left: 0; right: 0; background: #121212; padding: 15px; border-top: 1px solid var(--accent); display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
-        .player-controls { display: flex; flex-direction: column; gap: 10px; }
-        audio { width: 100%; height: 35px; filter: invert(100%); }
-
-        h3 { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 30px; }
+        .player-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #121212; padding: 15px; border-top: 1px solid var(--accent); display: none; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+        audio { width: 100%; height: 35px; margin-top: 8px; filter: invert(100%) hue-rotate(180deg) brightness(1.5); }
     </style>
 </head>
 <body>
 
     <div class="search-box">
-        <input type="text" id="searchQuery" placeholder="Трек, артист или ссылка...">
-        <button class="btn-search" onclick="search()">Найти</button>
+        <input type="text" id="searchInput" placeholder="Поиск треков или артистов...">
+        <button class="search-btn" onclick="performSearch()">Найти</button>
     </div>
 
-    <div id="results"></div>
+    <div id="searchResults"></div>
 
-    <div class="playlist-section">
-        <h3>Моя медиатека</h3>
-        <div id="myPlaylist"></div>
-    </div>
+    <div class="section-title">Мои Плейлисты</div>
+    <div id="userPlaylist"></div>
 
-    <div class="player-fixed" id="player">
-        <div class="player-controls">
-            <div id="nowPlaying" style="font-size: 0.85rem; font-weight: bold; color: var(--accent);"></div>
-            <audio id="audio" controls></audio>
-        </div>
+    <div class="player-bar" id="playerBar">
+        <div id="currentTrackTitle" style="font-size: 0.8rem; font-weight: bold; color: var(--accent);"></div>
+        <audio id="audioPlayer" controls></audio>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        
-        // Твои IP адреса
-        const API_BASE = "https://wicked-facts-call.loca.lt"; 
+        tg.ready();
 
-        async function search() {
-            const query = document.getElementById('searchQuery').value;
-            if(!query) return;
+        // !!! ВАЖНО: ВСТАВЬ СЮДА ССЫЛКУ ИЗ LOCAL TUNNEL !!!
+        const API_URL = "https://brown-bags-pick.loca.lt"; 
+        const userId = tg.initDataUnsafe.user?.id || 0;
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
             
-            const btn = document.querySelector('.btn-search');
+            const btn = document.querySelector('.search-btn');
             btn.innerText = "...";
-            
+
             try {
-                const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
-                const tracks = await res.json();
+                const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
+                const tracks = await response.json();
                 
-                const container = document.getElementById('results');
-                container.innerHTML = '<h3>Результаты поиска</h3>';
+                const container = document.getElementById('searchResults');
+                container.innerHTML = '<div class="section-title">Результаты поиска</div>';
                 
-                tracks.forEach(t => {
+                tracks.forEach(track => {
                     container.innerHTML += `
-                        <div class="track-item">
-                            <img src="${t.thumb || 'https://via.placeholder.com/50'}">
-                            <div class="track-info" onclick="play('${t.url}', '${t.title.replace(/'/g, "\\'")}')">
-                                <div class="track-title">${t.title}</div>
+                        <div class="track-card">
+                            <img src="${track.thumb || 'https://via.placeholder.com/50'}" class="track-img">
+                            <div class="track-info" onclick="startPlayback('${track.url}', '${track.title.replace(/'/g, "")}')">
+                                <div class="track-name">${track.title}</div>
                             </div>
-                            <button class="btn-add" onclick="addToPlaylist('${t.title.replace(/'/g, "\\'")}', '${t.url}')">+</button>
-                        </div>
-                    `;
+                            <button class="add-btn" onclick="saveToPlaylist('${track.title.replace(/'/g, "")}', '${track.url}')">+</button>
+                        </div>`;
                 });
-            } catch (e) {
-                alert("Ошибка связи с сервером Aura. Убедитесь, что бот запущен.");
+            } catch (err) {
+                alert("Ошибка: Сервер Aura недоступен. Проверьте LocalTunnel.");
             } finally {
                 btn.innerText = "Найти";
             }
         }
 
-        function play(url, title) {
-            const player = document.getElementById('player');
-            const audio = document.getElementById('audio');
-            document.getElementById('nowPlaying').innerText = "▶ " + title;
-            player.style.display = 'block';
-            audio.src = url;
-            audio.play();
-        }
-
-        async function addToPlaylist(title, url) {
+        async function saveToPlaylist(title, url) {
             try {
-                await fetch(`${API_BASE}/add_playlist`, {
+                await fetch(`${API_URL}/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        user_id: tg.initDataUnsafe.user?.id || 0, 
-                        title: title, 
-                        url: url 
-                    })
+                    body: JSON.stringify({ user_id: userId, title: title, url: url })
                 });
                 loadPlaylist();
             } catch (e) { console.error(e); }
         }
 
         async function loadPlaylist() {
-            const uid = tg.initDataUnsafe.user?.id || 0;
             try {
-                const res = await fetch(`${API_BASE}/get_playlist?user_id=${uid}`);
-                const tracks = await res.json();
-                const container = document.getElementById('myPlaylist');
+                const response = await fetch(`${API_URL}/get?user_id=${userId}`);
+                const tracks = await response.json();
+                const container = document.getElementById('userPlaylist');
                 container.innerHTML = tracks.map(t => `
-                    <div class="track-item" onclick="play('${t.url}', '${t.title.replace(/'/g, "\\'")}')">
+                    <div class="track-card" onclick="startPlayback('${t.url}', '${t.title.replace(/'/g, "")}')">
                         <div class="track-info">
-                            <div class="track-title">${t.title}</div>
+                            <div class="track-name">🎵 ${t.title}</div>
                         </div>
                     </div>
                 `).join('');
             } catch (e) { console.error(e); }
         }
 
-        // Загрузка при старте
+        function startPlayback(url, title) {
+            const bar = document.getElementById('playerBar');
+            const audio = document.getElementById('audioPlayer');
+            document.getElementById('currentTrackTitle').innerText = "▶ " + title;
+            bar.style.display = 'block';
+            audio.src = url;
+            audio.play();
+        }
+
+        // Загружаем плейлист при входе
         loadPlaylist();
     </script>
 </body>
