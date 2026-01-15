@@ -6,140 +6,137 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --glass: rgba(255, 255, 255, 0.1);
-            --border: rgba(255, 255, 255, 0.2);
-            --accent: #00d2ff;
+            --bg: #0f0f0f;
+            --panel: #1e1e1e;
+            --accent: #1DB954; /* Spotify Green */
+            --text: #ffffff;
         }
+
         body {
-            background: #0a0a0a; color: white; font-family: 'Segoe UI', sans-serif;
-            margin: 0; padding: 20px; transition: 0.4s;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-            min-height: 100vh;
-        }
-        /* Темы */
-        body.purple { --accent: #bf5af2; background: #120521; }
-        body.cyber { --accent: #f7e018; background: #000; color: #f7e018; }
-
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 25px; align-items: center; }
-        
-        select {
-            background: var(--glass); border: 1px solid var(--border); color: white;
-            padding: 8px; border-radius: 12px; backdrop-filter: blur(10px); outline: none;
+            background: var(--bg); color: var(--text);
+            font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0; display: flex; flex-direction: column; align-items: center;
+            height: 100vh; transition: 0.3s;
         }
 
-        .edit-btn {
-            background: var(--glass); border: 1px solid var(--border); color: white;
-            padding: 8px 15px; border-radius: 12px; font-weight: bold; cursor: pointer;
+        /* Скины */
+        body.skin-neon { --accent: #00f2ff; --bg: #050505; text-shadow: 0 0 10px var(--accent); }
+        body.skin-retro { --accent: #ff5500; --bg: #2b1d0e; }
+
+        .header { width: 100%; padding: 20px; text-align: center; font-weight: bold; font-size: 1.2em; }
+
+        /* Пластинка */
+        .player-container {
+            flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .edit-btn.active { background: rgba(255, 59, 48, 0.4); border-color: #ff3b30; }
-
-        .search-bar {
-            width: 100%; padding: 15px; border-radius: 20px; border: 1px solid var(--border);
-            background: var(--glass); backdrop-filter: blur(15px); color: white;
-            margin-bottom: 25px; box-sizing: border-box; outline: none;
+        .vinyl-wrapper {
+            position: relative; width: 260px; height: 260px;
+        }
+        .vinyl {
+            width: 100%; height: 100%;
+            background: radial-gradient(circle, #333 10%, #111 11%, #111 20%, #000 21%);
+            border-radius: 50%; border: 4px solid #222;
+            animation: rotate 5s linear infinite; animation-play-state: paused;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        }
+        .vinyl.playing { animation-play-state: running; }
+        .vinyl::before {
+            content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 50px; height: 50px; background: var(--panel); border-radius: 50%; border: 2px solid var(--accent);
         }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        
-        .card {
-            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--border); border-radius: 25px; padding: 15px; text-align: center;
-            position: relative; transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        /* Управление */
+        .controls-panel {
+            width: 100%; background: var(--panel); padding: 30px 0;
+            border-radius: 30px 30px 0 0; display: flex; flex-direction: column; align-items: center;
         }
-        .card:active { transform: scale(0.95); }
+        .track-info { margin-bottom: 20px; text-align: center; width: 80%; }
+        .track-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .cover {
-            width: 100%; aspect-ratio: 1; border-radius: 18px;
-            background: linear-gradient(135deg, var(--accent), transparent);
-            margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px;
+        .buttons { display: flex; gap: 20px; align-items: center; }
+        .btn-main {
+            width: 60px; height: 60px; background: var(--accent); border: none; border-radius: 50%;
+            font-weight: bold; color: black; cursor: pointer;
+        }
+        .btn-sec {
+            background: none; border: 1px solid #555; color: white; padding: 8px 15px; border-radius: 15px;
         }
 
-        .title { font-size: 13px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .folder-title { font-size: 11px; text-transform: uppercase; opacity: 0.5; letter-spacing: 1px; margin: 25px 0 10px 10px; }
-
-        .del-badge {
-            position: absolute; top: 10px; right: 10px; background: #ff3b30;
-            width: 25px; height: 25px; border-radius: 50%; display: none;
-            align-items: center; justify-content: center; font-weight: bold; z-index: 10;
-        }
-        .edit-mode .del-badge { display: flex; }
+        #progress-bar { width: 80%; height: 4px; background: #444; margin-bottom: 20px; border-radius: 2px; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; }
     </style>
 </head>
-<body>
+<body class="skin-modern">
 
-    <div class="top-nav">
-        <select onchange="setTheme(this.value)" id="themeSel">
-            <option value="default">Liquid Glass</option>
-            <option value="purple">Amethyst</option>
-            <option value="cyber">Cyberpunk</option>
-        </select>
-        <button class="edit-btn" id="editBtn" onclick="toggleEdit()">Править</button>
+    <div class="header">Aura Premium</div>
+
+    <div class="player-container">
+        <div class="vinyl-wrapper">
+            <div id="vinyl" class="vinyl"></div>
+        </div>
     </div>
 
-    <input type="text" class="search-bar" id="search" placeholder="Поиск в коллекции..." oninput="filter()">
+    <div class="controls-panel">
+        <div class="track-info">
+            <div class="track-title" id="title">Выбери трек в боте</div>
+        </div>
+        
+        <div id="progress-bar"><div id="progress-fill"></div></div>
 
-    <div id="container"></div>
+        <div class="buttons">
+            <button class="btn-sec" onclick="changeSkin()">SKIN</button>
+            <button class="btn-main" onclick="togglePlay()" id="playBtn">▶️</button>
+            <button class="btn-sec">QUEUE</button>
+        </div>
+    </div>
+
+    <audio id="audio"></audio>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        let isEdit = false;
+        const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.setHeaderColor('secondary_bg_color');
 
-        function setTheme(v) {
-            document.body.className = v === 'default' ? '' : v;
-            localStorage.setItem('myTheme', v);
+        const audio = document.getElementById('audio');
+        const vinyl = document.getElementById('vinyl');
+        const playBtn = document.getElementById('playBtn');
+        const fill = document.getElementById('progress-fill');
+
+        // Получение данных из URL
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('url')) audio.src = params.get('url');
+        if(params.has('title')) document.getElementById('title').innerText = params.get('title');
+
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play();
+                vinyl.classList.add('playing');
+                playBtn.innerText = '⏸';
+            } else {
+                audio.pause();
+                vinyl.classList.remove('playing');
+                playBtn.innerText = '▶️';
+            }
         }
 
-        function toggleEdit() {
-            isEdit = !isEdit;
-            document.body.classList.toggle('edit-mode', isEdit);
-            document.getElementById('editBtn').innerText = isEdit ? 'Готово' : 'Править';
-            document.getElementById('editBtn').classList.toggle('active', isEdit);
+        audio.ontimeupdate = () => {
+            const pct = (audio.currentTime / audio.duration) * 100;
+            fill.style.width = pct + '%';
+        };
+
+        const skins = ['skin-modern', 'skin-neon', 'skin-retro'];
+        let skinIdx = 0;
+        function changeSkin() {
+            document.body.classList.remove(skins[skinIdx]);
+            skinIdx = (skinIdx + 1) % skins.length;
+            document.body.classList.add(skins[skinIdx]);
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const data = JSON.parse(decodeURIComponent(urlParams.get('data') || '{}'));
-
-        for (const folder in data) {
-            let section = document.createElement('div');
-            section.innerHTML = `<div class="folder-title">${folder}</div>`;
-            let grid = document.createElement('div');
-            grid.className = 'grid';
-            
-            data[folder].forEach(t => {
-                let card = document.createElement('div');
-                card.className = 'card track-item';
-                card.dataset.name = t.name.toLowerCase();
-                card.innerHTML = `
-                    <div class="del-badge">×</div>
-                    <div class="cover">🎵</div>
-                    <div class="title">${t.name}</div>
-                `;
-                card.onclick = () => {
-                    tg.sendData(JSON.stringify({
-                        action: isEdit ? "delete" : "play",
-                        folder: folder,
-                        file_id: t.file_id,
-                        title: t.name
-                    }));
-                    tg.close();
-                };
-                grid.appendChild(card);
-            });
-            section.appendChild(grid);
-            document.getElementById('container').appendChild(section);
-        }
-
-        function filter() {
-            let q = document.getElementById('search').value.toLowerCase();
-            document.querySelectorAll('.track-item').forEach(i => {
-                i.style.display = i.dataset.name.includes(q) ? 'block' : 'none';
-            });
-        }
-
-        const saved = localStorage.getItem('myTheme');
-        if(saved) { setTheme(saved); document.getElementById('themeSel').value = saved; }
+        // Авто-подстройка под тему TG
+        document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
+        document.documentElement.style.setProperty('--text', tg.themeParams.text_color);
     </script>
 </body>
 </html>
