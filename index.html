@@ -6,24 +6,24 @@
     <title>Aura Music Player</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0b0b0b; color: white; font-family: 'Segoe UI', sans-serif; padding: 15px; }
-        .search-container { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 10px; border: none; background: #1a1a1a; color: white; outline: none; }
-        button { background: #2ecc71; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        body { background: #0b0b0b; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
+        .search-container { display: flex; gap: 8px; margin-bottom: 20px; position: sticky; top: 0; background: #0b0b0b; padding-bottom: 10px; }
+        input { flex: 1; padding: 12px; border-radius: 10px; border: none; background: #1a1a1a; color: white; }
+        button { background: #2ecc71; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
         
-        .track-card { background: #181818; padding: 12px; margin-bottom: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; transition: 0.3s; border: 1px solid #222; }
-        .track-info { display: flex; align-items: center; gap: 12px; }
-        .track-card img { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; }
-        .track-title { font-size: 14px; font-weight: 500; flex: 1; }
+        .track-card { background: #181818; padding: 12px; margin-bottom: 15px; border-radius: 15px; border: 1px solid #222; }
+        .track-info { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .track-card img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
+        .track-title { font-size: 14px; font-weight: bold; line-height: 1.2; flex: 1; }
         
-        audio { width: 100%; height: 35px; margin-top: 5px; filter: invert(100%); opacity: 0.8; }
-        #status { text-align: center; color: #777; margin-top: 20px; }
+        audio { width: 100%; height: 35px; filter: invert(1); opacity: 0.8; }
+        #status { text-align: center; color: #888; font-size: 14px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-        <input type="text" id="query" placeholder="Поиск музыки...">
+        <input type="text" id="query" placeholder="Поиск музыки в Aura...">
         <button onclick="search()">🔍</button>
     </div>
 
@@ -34,7 +34,7 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // ОБЯЗАТЕЛЬНО: Проверь актуальность ссылки из xTunnel!
+        // !!! ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ АКТУАЛЬНУЮ ИЗ XTUNNEL !!!
         const API_URL = "https://9e686033-1df0-42d7-b1de-2b59f09a279c.tunnel4.com";
 
         async function search() {
@@ -45,7 +45,7 @@
             if (!query) return;
 
             resultsDiv.innerHTML = "";
-            statusDiv.innerText = "⏳ Ищем лучшие треки...";
+            statusDiv.innerText = "⏳ Загрузка треков...";
 
             try {
                 const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
@@ -53,7 +53,7 @@
                 statusDiv.innerText = "";
 
                 if (data.length === 0) {
-                    statusDiv.innerText = "Ничего не найдено 😕";
+                    statusDiv.innerText = "Ничего не нашли 😕";
                     return;
                 }
 
@@ -63,12 +63,12 @@
                     
                     card.innerHTML = `
                         <div class="track-info">
-                            <img src="${track.img || 'https://via.placeholder.com/50'}" alt="cover">
+                            <img src="${track.img || 'https://via.placeholder.com/60'}" alt="cover">
                             <div class="track-title">${track.title}</div>
                         </div>
                         <audio controls>
                             <source src="${track.url}" type="audio/mpeg">
-                            Ваш браузер не поддерживает плеер.
+                            Ваш плеер не поддерживается.
                         </audio>
                     `;
                     resultsDiv.appendChild(card);
@@ -76,10 +76,9 @@
 
             } catch (err) {
                 statusDiv.innerText = "";
-                alert("Ошибка связи с сервером Aura. Проверь xTunnel!");
+                alert("Ошибка: Сервер не отвечает. Проверь xTunnel и Aura.py!");
             }
         }
     </script>
 </body>
 </html>
-
